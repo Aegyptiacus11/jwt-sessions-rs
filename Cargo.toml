@@ -1,0 +1,51 @@
+[package]
+name = "jwt-sessions"
+version = "0.1.0-dev"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT OR Apache-2.0"
+description = "First-party JWT auth: rotating, reuse-detecting refresh tokens in an httpOnly cookie, with an axum router"
+repository = "https://github.com/Aegyptiacus11/jwt-sessions-rs"
+readme = "README.md"
+keywords = ["jwt", "auth", "session", "refresh-token", "axum"]
+categories = ["authentication", "web-programming"]
+
+[features]
+default = []
+# The HTTP contract as an axum router, and the `Claims` extractor.
+axum = ["dep:axum", "dep:tracing"]
+# A refresh store on SQLite or Postgres, through sqlx's Any driver.
+sqlx = ["dep:sqlx"]
+
+[dependencies]
+axum = { version = "0.8", default-features = false, features = ["json", "original-uri"], optional = true }
+base64 = "0.23.1"
+getrandom = "0.4.3"
+# rust_crypto: pure Rust, nothing to build with cmake or a C compiler.
+jsonwebtoken = { version = "12", default-features = false, features = ["rust_crypto"] }
+password-auth = "2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+sqlx = { version = "0.9", default-features = false, features = ["any", "runtime-tokio", "sqlite", "postgres"], optional = true }
+thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = ["rt"] }
+tracing = { version = "0.1", optional = true }
+
+[dev-dependencies]
+axum = { version = "0.8", default-features = false, features = ["json", "original-uri", "tokio", "http1"] }
+http-body-util = "0.1"
+tempfile = "3"
+tokio = { version = "1.54.1", features = ["macros", "net", "rt-multi-thread"] }
+tower = { version = "0.5", features = ["util"] }
+
+[[test]]
+name = "http"
+required-features = ["axum"]
+
+[[example]]
+name = "demo"
+required-features = ["axum"]
+
+[package.metadata.docs.rs]
+all-features = true
