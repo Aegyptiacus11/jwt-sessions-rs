@@ -11,14 +11,12 @@ This is the Rust counterpart of the Python
 [jwt-sessions](https://github.com/Aegyptiacus11/jwt-sessions) for FastAPI: the same contract
 over HTTP, so a client written for one works with the other.
 
-> Status: pre-release (`0.1.0-dev`); the API may still change before 0.1.0.
+> Status: 0.1.0, the first release; the API may still change before 1.0.
 
 ## Installing
 
-Not on crates.io: depend on this repository, pinned to a commit.
-
 ```toml
-jwt-sessions = { git = "https://github.com/Aegyptiacus11/jwt-sessions-rs", rev = "<commit>", features = ["axum", "sqlx"] }
+jwt-sessions = { version = "0.1.0", features = ["axum", "sqlx"] }
 ```
 
 | Feature | Adds |
