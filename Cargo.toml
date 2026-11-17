@@ -1,6 +1,6 @@
 [package]
 name = "jwt-sessions"
-version = "0.1.0-dev"
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.99"
 license = "MIT OR Apache-2.0"
@@ -9,6 +9,7 @@ repository = "https://github.com/Aegyptiacus11/jwt-sessions-rs"
 readme = "README.md"
 keywords = ["jwt", "auth", "session", "refresh-token", "axum"]
 categories = ["authentication", "web-programming"]
+exclude = ["/.github"]
 
 [features]
 default = []
