@@ -135,6 +135,27 @@ impl<U: UserStore, S: RefreshStore> Auth<U, S> {
         })
     }
 
+    /// A session for a user someone else has authenticated, an OpenID provider for one:
+    /// no password is checked, so call it only once that party's answer has been verified.
+    /// An unknown or deactivated account is refused like a wrong password.
+    pub async fn start(&self, user_id: &str) -> Result<Session, AuthError> {
+        self.start_at(user_id, SystemTime::now()).await
+    }
+
+    /// [`start`](Self::start) as if it were `now`.
+    pub async fn start_at(&self, user_id: &str, now: SystemTime) -> Result<Session, AuthError> {
+        let Some(user) = self.users.by_id(user_id).await?.filter(|user| user.active) else {
+            return Err(AuthError::InvalidCredentials);
+        };
+        let access_token = self.access.issue_at(&user.id, &user.claims, now)?;
+        let refresh_token = self.refresh.start(&user.id, now).await?;
+        Ok(Session {
+            access_token,
+            refresh_token,
+            user_id: user.id,
+        })
+    }
+
     /// A new access token and the refresh token's successor. An account deactivated since
     /// sign-in ends the session.
     pub async fn renew(&self, refresh_token: &str) -> Result<Session, AuthError> {

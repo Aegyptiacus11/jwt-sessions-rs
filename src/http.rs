@@ -123,6 +123,25 @@ impl CookieSettings {
         out
     }
 
+    /// The `Set-Cookie` value that hands a refresh token to the browser, for an application
+    /// that starts a session outside these routes ([`Auth::start`]) and answers itself, with
+    /// a redirect for one. `path` is where the routes are served (`/auth`'s directory), or
+    /// the settings' path when one is set; a path that could add attributes is refused.
+    pub fn set_cookie(
+        &self,
+        refresh_token: &str,
+        max_age: u64,
+        path: &str,
+    ) -> Result<String, ConfigError> {
+        let path = self.path.as_deref().unwrap_or(path);
+        if path.is_empty() || !attribute_safe(path) || !attribute_safe(refresh_token) {
+            return Err(ConfigError::Other(format!(
+                "cookie path {path:?} is not usable"
+            )));
+        }
+        Ok(self.set(refresh_token, max_age, path))
+    }
+
     fn set(&self, token: &str, max_age: u64, path: &str) -> String {
         format!(
             "{}={token}; Max-Age={max_age}; {}",
