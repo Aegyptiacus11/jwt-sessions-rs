@@ -1,5 +1,7 @@
 # jwt-sessions
 
+[![crates.io](https://img.shields.io/crates/v/jwt-sessions)](https://crates.io/crates/jwt-sessions) [![CI](https://github.com/Aegyptiacus11/jwt-sessions-rs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Aegyptiacus11/jwt-sessions-rs/actions/workflows/ci.yml) [![Minimum Rust version](https://img.shields.io/badge/MSRV-1.99-blue)](Cargo.toml) [![Dependencies](https://deps.rs/crate/jwt-sessions/latest/status.svg)](https://deps.rs/crate/jwt-sessions) [![docs.rs](https://img.shields.io/docsrs/jwt-sessions)](https://docs.rs/jwt-sessions) [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
+
 First-party authentication for Rust services: login and password sign-in, short-lived access
 tokens, and refresh tokens that rotate on every use and give themselves away when stolen. With
 an [axum](https://github.com/tokio-rs/axum) router for the HTTP contract.
