@@ -684,3 +684,86 @@ async fn a_request_path_that_could_inject_cookie_attributes_is_refused() {
     assert_eq!(injected.status, StatusCode::BAD_REQUEST);
     assert_eq!(injected.set_cookie, None);
 }
+
+/// A session another party authenticated: started without a password, and the cookie it
+/// hands out is renewed by `/auth/refresh` like one from `/auth/login`.
+#[tokio::test]
+async fn a_session_started_without_a_password_refreshes_like_any_other() {
+    let access = AccessTokens::new(SECRET).unwrap();
+    let auth = Arc::new(Auth::new(
+        ada(),
+        access.clone(),
+        RefreshTokens::new(MemoryRefreshStore::new()),
+    ));
+    let session = auth.start("u1").await.unwrap();
+    assert_eq!(session.user_id, "u1");
+    assert_eq!(access.verify(&session.access_token).unwrap().sub(), "u1");
+
+    let cookie = insecure()
+        .set_cookie(&session.refresh_token, 60, "/api/v1/auth")
+        .unwrap();
+    assert!(cookie.contains("Path=/api/v1/auth; HttpOnly"), "{cookie}");
+    let pair = cookie.split(';').next().unwrap().to_owned();
+
+    let app = Router::new()
+        .nest("/api/v1", auth_router(auth, insecure()).unwrap())
+        .with_state(access);
+    let response = app
+        .oneshot(
+            Request::post("/api/v1/auth/refresh")
+                .header(COOKIE, pair)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn no_session_starts_for_an_unknown_or_deactivated_account() {
+    let users = ada();
+    let auth = Auth::new(
+        users.clone(),
+        AccessTokens::new(SECRET).unwrap(),
+        RefreshTokens::new(MemoryRefreshStore::new()),
+    );
+    assert!(matches!(
+        auth.start("nobody").await,
+        Err(jwt_sessions::AuthError::InvalidCredentials)
+    ));
+    users
+        .0
+        .lock()
+        .unwrap()
+        .get_mut("ada@example.com")
+        .unwrap()
+        .active = false;
+    assert!(matches!(
+        auth.start("u1").await,
+        Err(jwt_sessions::AuthError::InvalidCredentials)
+    ));
+}
+
+#[test]
+fn a_cookie_path_that_could_add_attributes_is_refused() {
+    let cookie = insecure();
+    assert!(
+        cookie
+            .set_cookie("token", 60, "/auth; Domain=evil")
+            .is_err()
+    );
+    assert!(cookie.set_cookie("token", 60, "").is_err());
+    assert!(cookie.set_cookie("tok;en", 60, "/auth").is_err());
+    // the settings' path wins over the one given
+    let fixed = CookieSettings {
+        path: Some("/pacs/auth".into()),
+        ..insecure()
+    };
+    assert!(
+        fixed
+            .set_cookie("token", 60, "/auth")
+            .unwrap()
+            .contains("Path=/pacs/auth;")
+    );
+}
