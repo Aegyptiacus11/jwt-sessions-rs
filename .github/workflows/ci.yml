@@ -6,6 +6,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call: # release.yml: nothing is published unless every job here passes
 
 permissions:
   contents: read
@@ -26,6 +27,8 @@ jobs:
       - name: Toolchain (rust-toolchain.toml)
         run: rustup show active-toolchain || rustup toolchain install
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - name: The release's tag check
+        run: .github/scripts/test-check-tag.sh
       - run: cargo fmt --check
       - name: clippy, each set of features
         run: |
@@ -36,6 +39,8 @@ jobs:
             cargo clippy --all-targets --locked $features -- -D warnings
             echo "::endgroup::"
           done
+      - name: The package crates.io would get builds on its own
+        run: cargo publish --dry-run --locked --all-features
 
   test:
     runs-on: ubuntu-26.04
