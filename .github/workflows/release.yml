@@ -1,4 +1,5 @@
-# Publishes jwt-sessions to crates.io when a tag v<version> is pushed (the version in Cargo.toml).
+# Publishes jwt-sessions to crates.io, then makes the GitHub Release, when a tag v<version>
+# is pushed (the version in Cargo.toml).
 # Nothing is published unless the tag and the commit pass check-tag.sh and every job of ci.yml
 # passes on that commit. No token is kept: crates.io gives this workflow one for 30 minutes
 # (Trusted Publishing, set on the crate's page for this repository and this file name).
@@ -59,3 +60,18 @@ jobs:
         run: cargo publish --locked --no-verify
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  # After the registry: a release names a version that can be installed.
+  github-release:
+    needs: publish
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: .github/scripts/github-release.sh jwt-sessions "$GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
