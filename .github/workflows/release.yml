@@ -1,0 +1,61 @@
+# Publishes jwt-sessions to crates.io when a tag v<version> is pushed (the version in Cargo.toml).
+# Nothing is published unless the tag and the commit pass check-tag.sh and every job of ci.yml
+# passes on that commit. No token is kept: crates.io gives this workflow one for 30 minutes
+# (Trusted Publishing, set on the crate's page for this repository and this file name).
+# Run by hand (Actions -> release -> Run workflow), it runs the tests and publishes nothing.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A second run waits: a publish is never stopped halfway.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  tag:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # main too: the tagged commit must be on it
+      - name: Toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: The tag is the version, on main
+        run: .github/scripts/check-tag.sh "$GITHUB_REF_NAME"
+
+  tests:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: [tag, tests] # skipped when either failed or was skipped
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # the proof crates.io checks before it gives the token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: The package builds, before there is a token
+        run: cargo publish --dry-run --locked --all-features
+      - uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
+        id: auth
+      - name: Publish
+        run: cargo publish --locked --no-verify
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
